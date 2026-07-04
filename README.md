@@ -47,30 +47,6 @@ Three long-running services, orchestrated with Docker Compose:
 
 ---
 
-## Quick start (development)
-
-**Requirements:** Python 3.11+, Docker
-
-```bash
-git clone https://github.com/varunkandukuri24/gpuindex.git
-cd gpuindex
-
-cp .env.example .env
-docker compose up --build -d
-```
-
-Open **http://localhost:8080**
-
-```bash
-docker compose exec scheduler gpuindex-status
-docker compose exec scheduler gpuindex-rollup
-pytest
-```
-
-Copy `.env.example` to `.env` and set any required API keys before running collectors. Do not commit `.env`.
-
----
-
 ## JSON API
 
 | Endpoint | Description |
