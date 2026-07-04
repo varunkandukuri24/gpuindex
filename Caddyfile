@@ -1,0 +1,5 @@
+# Local: http://localhost:8080
+# Production: replace :80 block with your domain, e.g. gpuindex.example.com
+:80 {
+	reverse_proxy api:8000
+}

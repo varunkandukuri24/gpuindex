@@ -1,0 +1,28 @@
+{
+  "data": {
+    "gpuTypes": [
+      {
+        "id": "NVIDIA H100 80GB HBM3",
+        "displayName": "H100 SXM",
+        "memoryInGb": 80,
+        "secureCloud": true,
+        "communityCloud": false,
+        "lowestPrice": {
+          "minimumBidPrice": 2.5,
+          "uninterruptablePrice": 3.19
+        }
+      },
+      {
+        "id": "NVIDIA A100 80GB PCIe",
+        "displayName": "A100 PCIe",
+        "memoryInGb": 80,
+        "secureCloud": true,
+        "communityCloud": true,
+        "lowestPrice": {
+          "minimumBidPrice": 1.19,
+          "uninterruptablePrice": 1.39
+        }
+      }
+    ]
+  }
+}

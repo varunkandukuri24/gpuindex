@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>GPU Cloud Price Index</h1>
+<p class="subtitle">Cheapest listed and available per-GPU-hour prices across cloud providers.</p>
+
+{% if snapshot_at %}
+<p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }} · refreshes hourly</p>
+
+<div class="filters">
+  <label>Filter billing:
+    <select id="billing-filter">
+      <option value="">All</option>
+      <option value="on_demand">On-demand</option>
+      <option value="spot">Spot</option>
+    </select>
+  </label>
+</div>
+
+<div class="table-wrap">
+  <table id="index-table">
+    <thead>
+      <tr>
+        <th>GPU</th>
+        <th>Cheapest listed</th>
+        <th>Cheapest available</th>
+        <th>Providers</th>
+        <th>Avail 24h</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for snap, gpu in rows %}
+      <tr>
+        <td><a href="/gpu/{{ gpu.name }}">{{ gpu.name }}</a></td>
+        <td>{% if snap.cheapest_listed_per_gpu_hour_usd %}${{ '%.2f'|format(snap.cheapest_listed_per_gpu_hour_usd) }}{% else %}—{% endif %}</td>
+        <td>{% if snap.cheapest_available_per_gpu_hour_usd %}${{ '%.2f'|format(snap.cheapest_available_per_gpu_hour_usd) }}{% else %}—{% endif %}</td>
+        <td>{{ snap.provider_count }}</td>
+        <td><span class="indicator {{ snap.availability_indicator }}"></span>
+          {% if snap.availability_rate_24h is not none %}{{ '%.0f'|format(snap.availability_rate_24h * 100) }}%{% else %}unknown{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">No snapshot data yet. Collectors and rollups are starting up.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,50 @@
+[project]
+name = "gpu-index"
+version = "0.1.0"
+description = "GPU cloud market intelligence — pricing and availability time series"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.13,<2",
+    "apscheduler>=3.10,<4",
+    "fastapi>=0.110,<1",
+    "uvicorn[standard]>=0.27,<1",
+    "httpx>=0.27,<1",
+    "python-dotenv>=1.0,<2",
+    "pydantic>=2.6,<3",
+    "pydantic-settings>=2.2,<3",
+    "jinja2>=3.1,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9",
+    "pytest-asyncio>=0.23,<1",
+    "responses>=0.25,<1",
+    "respx>=0.21,<1",
+]
+
+[project.scripts]
+gpuindex-scheduler = "jobs.scheduler:main"
+gpuindex-status = "jobs.status:main"
+gpuindex-snapshot = "analysis.snapshots:main"
+gpuindex-rollup = "jobs.rollup_job:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["config", "logging_utils"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["collectors*", "db*", "api*", "jobs*", "analysis*", "probes*"]
+
+[tool.setuptools.package-data]
+"*" = ["web/templates/*", "web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

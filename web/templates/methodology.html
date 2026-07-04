@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Methodology</h1>
+<p class="subtitle">What the numbers on this site mean, and what they don't.</p>
+
+<section class="prose">
+  <h2>What GPU Index tracks</h2>
+  <p>We publish hourly snapshots of GPU cloud <strong>list prices</strong> and, where we can observe it, <strong>whether capacity appears available</strong>. Historical data is kept — we don't overwrite past observations.</p>
+
+  <h2>How fresh is the data?</h2>
+  <p>Numbers on this site refresh about <strong>once per hour</strong> (UTC). The timestamp at the top of each page shows when the latest snapshot was computed. Expect up to one hour of lag.</p>
+
+  <h2>Prices</h2>
+  <p>All prices are shown as <strong>USD per GPU-hour</strong> so you can compare across providers. We normalize GPU names (e.g. H100-SXM-80GB) because each provider labels hardware differently.</p>
+  <p>Prices come from a mix of public provider catalogs, marketplace listings, and published rate cards. A low listed price does not guarantee you can rent at that rate right now.</p>
+
+  <h2>Availability</h2>
+  <p>Not every provider publishes capacity information. Where we have a signal, we show it; where we don't, we label it <strong>unknown</strong> rather than guessing.</p>
+  <ul>
+    <li><span class="indicator green"></span> <strong>Green</strong> — capacity looked available in most checks over the past 24 hours</li>
+    <li><span class="indicator yellow"></span> <strong>Yellow</strong> — mixed signals</li>
+    <li><span class="indicator red"></span> <strong>Red</strong> — rarely looked available recently</li>
+    <li><span class="indicator unknown"></span> <strong>Unknown</strong> — we track list prices but have no availability signal for this GPU</li>
+  </ul>
+  <p><strong>Cheapest available</strong> only includes offers where we saw a recent availability signal. <strong>Cheapest listed</strong> includes all published prices, including catalog entries that may not be rentable on demand.</p>
+
+  <h2>Limitations</h2>
+  <ul>
+    <li>List prices may exclude spot discounts, reserved pricing, credits, or enterprise agreements.</li>
+    <li>Marketplace and catalog data can lag reality by minutes to hours.</li>
+    <li>Availability indicators are observational, not a guarantee of successful provisioning.</li>
+    <li>Coverage and accuracy improve over time as we add providers and history accumulates.</li>
+  </ul>
+
+  <h2>API</h2>
+  <p>JSON endpoints mirror the data on this site. Access is free and rate-limited. No account required.</p>
+  <ul>
+    <li><a href="/api/v1/index">/api/v1/index</a></li>
+    <li><a href="/api/v1/prices?gpu=H100-SXM-80GB">/api/v1/prices?gpu=…</a></li>
+    <li><a href="/api/v1/availability?gpu=H100-SXM-80GB">/api/v1/availability?gpu=…</a></li>
+    <li><a href="/api/v1/meta">/api/v1/meta</a></li>
+  </ul>
+</section>
+{% endblock %}

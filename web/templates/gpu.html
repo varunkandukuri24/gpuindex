@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<p><a href="/">← Index</a></p>
+<h1>{{ gpu_name }}</h1>
+{% if gpu_type.vram_gb %}<p class="subtitle">{{ gpu_type.vram_gb }} GB · {{ gpu_type.architecture or 'GPU' }}</p>{% endif %}
+{% if snapshot_at %}
+<p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+{% endif %}
+
+<section>
+  <h2>Price history (min / median / max across providers)</h2>
+  <canvas id="price-chart" height="120"></canvas>
+</section>
+
+<section>
+  <h2>Provider comparison</h2>
+  <div class="table-wrap">
+    <table id="provider-table">
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Region</th>
+          <th>Billing</th>
+          <th>$/GPU-hr</th>
+          <th>Avail 24h</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Availability heatmap (7 days)</h2>
+  <div id="heatmap" class="heatmap"></div>
+  <p class="hint">Darker green = higher availability rate that day. Gray = no data.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GPU = {{ gpu_name|tojson }};
+
+async function loadGpuData() {
+  const [prices, avail] = await Promise.all([
+    fetch(`/api/v1/prices?gpu=${encodeURIComponent(GPU)}`).then(r => r.json()),
+    fetch(`/api/v1/availability?gpu=${encodeURIComponent(GPU)}`).then(r => r.json()),
+  ]);
+
+  const tbody = document.querySelector('#provider-table tbody');
+  tbody.innerHTML = prices.providers.map(p => `
+    <tr>
+      <td>${p.provider}</td>
+      <td>${p.region}</td>
+      <td>${p.billing_kind}</td>
+      <td>$${p.price_per_gpu_hour_usd.toFixed(2)}</td>
+      <td><span class="indicator ${p.availability_indicator}"></span>
+        ${p.availability_rate_24h != null ? Math.round(p.availability_rate_24h * 100) + '%' : 'unknown'}
+      </td>
+    </tr>
+  `).join('');
+
+  const hist = prices.history || [];
+  const labels = hist.map(h => h.hour.slice(0, 16).replace('T', ' '));
+  new Chart(document.getElementById('price-chart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Min', data: hist.map(h => h.min), borderColor: '#22c55e', tension: 0.2, pointRadius: 0 },
+        { label: 'Median', data: hist.map(h => h.median), borderColor: '#3b82f6', tension: 0.2, pointRadius: 0 },
+        { label: 'Max', data: hist.map(h => h.max), borderColor: '#ef4444', tension: 0.2, pointRadius: 0 },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: { y: { title: { display: true, text: 'USD per GPU-hour' } } },
+      plugins: { legend: { position: 'bottom' } },
+    },
+  });
+
+  renderHeatmap(avail.daily || []);
+}
+
+function renderHeatmap(daily) {
+  const el = document.getElementById('heatmap');
+  if (!daily.length) {
+    el.innerHTML = '<p class="empty">No availability probes for this GPU yet.</p>';
+    return;
+  }
+  const providers = [...new Set(daily.map(d => d.provider))].sort();
+  const days = [...new Set(daily.map(d => d.day))].sort();
+  const lookup = {};
+  daily.forEach(d => { lookup[`${d.provider}|${d.day}`] = d; });
+
+  let html = '<table class="heatmap-table"><thead><tr><th></th>';
+  days.forEach(d => { html += `<th>${d.slice(5)}</th>`; });
+  html += '</tr></thead><tbody>';
+  providers.forEach(prov => {
+    html += `<tr><th>${prov}</th>`;
+    days.forEach(day => {
+      const cell = lookup[`${prov}|${day}`];
+      const rate = cell?.availability_rate;
+      const bg = rate == null ? '#e5e7eb' : `rgba(34,197,94,${Math.max(0.15, rate)})`;
+      const label = rate != null ? Math.round(rate * 100) + '%' : '—';
+      html += `<td style="background:${bg}" title="${prov} ${day}">${label}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+loadGpuData().catch(err => {
+  document.querySelector('main').insertAdjacentHTML('beforeend',
+    `<p class="error">Failed to load data: ${err.message}</p>`);
+});
+</script>
+{% endblock %}

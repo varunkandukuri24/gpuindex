@@ -1,0 +1,39 @@
+services:
+  scheduler:
+    build: .
+    container_name: gpuindex-scheduler
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite:////app/data/gpuindex.db
+    volumes:
+      - gpuindex-data:/app/data
+    mem_limit: 512m
+
+  api:
+    build: .
+    container_name: gpuindex-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite:////app/data/gpuindex.db
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - gpuindex-data:/app/data
+    mem_limit: 256m
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: gpuindex-caddy
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+
+volumes:
+  gpuindex-data:

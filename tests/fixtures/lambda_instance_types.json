@@ -1,0 +1,24 @@
+{
+  "data": {
+    "gpu_1x_h100_sxm": {
+      "instance_type": {
+        "name": "gpu_1x_h100_sxm",
+        "price_cents_per_hour": 499,
+        "description": "1x H100 (80 GB SXM5)",
+        "specs": {"vcpus": 26, "memory_gib": 200, "storage_gib": 512}
+      },
+      "regions_with_capacity_available": [
+        {"name": "us-west-1", "description": "California, USA"}
+      ]
+    },
+    "gpu_1x_a100": {
+      "instance_type": {
+        "name": "gpu_1x_a100",
+        "price_cents_per_hour": 129,
+        "description": "1x A100 (40 GB PCIe)",
+        "specs": {"vcpus": 30, "memory_gib": 200, "storage_gib": 512}
+      },
+      "regions_with_capacity_available": []
+    }
+  }
+}
