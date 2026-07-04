@@ -1,5 +1,10 @@
-# Local: http://localhost:8080
-# Production: replace :80 block with your domain, e.g. gpuindex.example.com
+# Local development — http://localhost:8080
 :80 {
 	reverse_proxy api:8000
 }
+
+# Production — copy to Caddyfile and replace with your domain:
+#
+# gpu.yourdomain.com {
+#     reverse_proxy api:8000
+# }
