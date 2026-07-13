@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from analysis.rollups import latest_snapshot_at
+from analysis.trends import build_index_trends
 from api.deps import get_db
 from db.models import (
     AvailabilityDailyRollup,
@@ -51,9 +52,11 @@ def index(
         .order_by(GpuType.name)
         .all()
     )
+    trends = build_index_trends(session, snapshot_at)
 
     items = []
     for snap, gpu in rows:
+        trend = trends.get(gpu.id, {})
         items.append(
             {
                 "gpu": gpu.name,
@@ -64,6 +67,9 @@ def index(
                 "provider_count": snap.provider_count,
                 "availability_rate_24h": snap.availability_rate_24h,
                 "availability_indicator": snap.availability_indicator,
+                "sparkline": trend.get("sparkline", []),
+                "change_24h_pct": trend.get("change_24h_pct"),
+                "change_7d_pct": trend.get("change_7d_pct"),
             }
         )
 

@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from analysis.rollups import latest_snapshot_at
+from analysis.trends import availability_level, build_index_trends, sparkline_svg
 from api.deps import get_db
 from config import settings
 from db.models import GpuIndexSnapshot, GpuType
@@ -25,13 +26,31 @@ def index_page(request: Request, session: Session = Depends(get_db)) -> HTMLResp
     snapshot_at = latest_snapshot_at(session)
     rows = []
     if snapshot_at:
-        rows = (
+        trends = build_index_trends(session, snapshot_at)
+        raw_rows = (
             session.query(GpuIndexSnapshot, GpuType)
             .join(GpuType, GpuIndexSnapshot.gpu_type_id == GpuType.id)
             .filter(GpuIndexSnapshot.snapshot_at == snapshot_at)
             .order_by(GpuIndexSnapshot.cheapest_listed_per_gpu_hour_usd.asc())
             .all()
         )
+        for snap, gpu in raw_rows:
+            trend = trends.get(gpu.id, {})
+            spark = trend.get("sparkline") or []
+            avail_label, avail_segments = availability_level(
+                snap.availability_indicator, snap.availability_rate_24h
+            )
+            rows.append(
+                {
+                    "snap": snap,
+                    "gpu": gpu,
+                    "sparkline_svg": sparkline_svg(spark),
+                    "change_24h_pct": trend.get("change_24h_pct"),
+                    "change_7d_pct": trend.get("change_7d_pct"),
+                    "avail_label": avail_label,
+                    "avail_segments": avail_segments,
+                }
+            )
 
     return templates.TemplateResponse(
         request,
