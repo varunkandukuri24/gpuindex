@@ -1,10 +1,10 @@
-# GPU Index
+# GPU Pulse
 
 An open-source index of GPU cloud **list prices** and **availability signals**, updated hourly from public provider data.
 
 The goal is a durable, append-only time series: what did GPUs cost, and where did capacity actually look available, over time? The public site and JSON API expose hourly snapshots derived from that dataset.
 
-**Live site:** _(add your URL here)_
+**Live site:** [https://gpupulse.xyz](https://gpupulse.xyz)
 
 ---
 

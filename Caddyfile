@@ -3,8 +3,8 @@
 	reverse_proxy api:8000
 }
 
-# Production — copy to Caddyfile and replace with your domain:
+# Production — use this block on the VPS (ports 80/443):
 #
-# gpu.yourdomain.com {
+# gpupulse.xyz {
 #     reverse_proxy api:8000
 # }
