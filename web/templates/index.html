@@ -1,47 +1,74 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>GPU Cloud Price Index</h1>
-<p class="subtitle">Cheapest listed and available per-GPU-hour prices across cloud providers.</p>
+<p class="subtitle">Cheapest listed and available per-GPU-hour prices, with 7-day trends.</p>
 
 {% if snapshot_at %}
 <p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }} · refreshes hourly</p>
 
-<div class="filters">
-  <label>Filter billing:
-    <select id="billing-filter">
-      <option value="">All</option>
-      <option value="on_demand">On-demand</option>
-      <option value="spot">Spot</option>
-    </select>
-  </label>
+<div class="gpu-grid">
+  {% for row in rows %}
+  <a class="gpu-card" href="/gpu/{{ row.gpu.name }}">
+    <div class="gpu-card-top">
+      <div>
+        <h2 class="gpu-card-title">{{ row.gpu.name }}</h2>
+        <div class="gpu-tags">
+          {% if row.gpu.architecture %}<span class="tag">{{ row.gpu.architecture }}</span>{% endif %}
+          {% if row.gpu.vram_gb %}<span class="tag">{{ row.gpu.vram_gb }}GB VRAM</span>{% endif %}
+        </div>
+      </div>
+      <div class="avail-meter" title="Availability (24h)">
+        <div class="avail-bars" aria-hidden="true">
+          {% for i in range(4) %}
+          <span class="avail-bar {% if i < row.avail_segments %}on {{ row.snap.availability_indicator }}{% endif %}"></span>
+          {% endfor %}
+        </div>
+        <span class="avail-label">{{ row.avail_label }}</span>
+      </div>
+    </div>
+
+    <div class="gpu-card-chart">
+      {% if row.sparkline_svg %}
+        {{ row.sparkline_svg|safe }}
+      {% else %}
+        <p class="chart-empty">Not enough history yet</p>
+      {% endif %}
+    </div>
+
+    <div class="gpu-card-bottom">
+      <div class="price-block">
+        <div class="price-main">
+          {% if row.snap.cheapest_listed_per_gpu_hour_usd %}${{ '%.2f'|format(row.snap.cheapest_listed_per_gpu_hour_usd) }}<span class="per">/hr</span>{% else %}—{% endif %}
+        </div>
+        <div class="price-sub">
+          {% if row.snap.cheapest_available_per_gpu_hour_usd %}
+            available from ${{ '%.2f'|format(row.snap.cheapest_available_per_gpu_hour_usd) }}/hr
+          {% else %}
+            available price unknown
+          {% endif %}
+          · {{ row.snap.provider_count }} providers
+        </div>
+      </div>
+      <div class="delta-stack">
+        {% if row.change_24h_pct is not none %}
+        <span class="delta {% if row.change_24h_pct < 0 %}down{% elif row.change_24h_pct > 0 %}up{% endif %}">
+          {% if row.change_24h_pct > 0 %}+{% endif %}{{ '%.1f'|format(row.change_24h_pct) }}% <span class="delta-period">24h</span>
+        </span>
+        {% endif %}
+        {% if row.change_7d_pct is not none %}
+        <span class="delta {% if row.change_7d_pct < 0 %}down{% elif row.change_7d_pct > 0 %}up{% endif %}">
+          {% if row.change_7d_pct > 0 %}+{% endif %}{{ '%.1f'|format(row.change_7d_pct) }}% <span class="delta-period">7d</span>
+        </span>
+        {% else %}
+        <span class="muted">7d —</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
 </div>
 
-<div class="table-wrap">
-  <table id="index-table">
-    <thead>
-      <tr>
-        <th>GPU</th>
-        <th>Cheapest listed</th>
-        <th>Cheapest available</th>
-        <th>Providers</th>
-        <th>Avail 24h</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for snap, gpu in rows %}
-      <tr>
-        <td><a href="/gpu/{{ gpu.name }}">{{ gpu.name }}</a></td>
-        <td>{% if snap.cheapest_listed_per_gpu_hour_usd %}${{ '%.2f'|format(snap.cheapest_listed_per_gpu_hour_usd) }}{% else %}—{% endif %}</td>
-        <td>{% if snap.cheapest_available_per_gpu_hour_usd %}${{ '%.2f'|format(snap.cheapest_available_per_gpu_hour_usd) }}{% else %}—{% endif %}</td>
-        <td>{{ snap.provider_count }}</td>
-        <td><span class="indicator {{ snap.availability_indicator }}"></span>
-          {% if snap.availability_rate_24h is not none %}{{ '%.0f'|format(snap.availability_rate_24h * 100) }}%{% else %}unknown{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<p class="hint">Charts show 7-day median list price. Green = cheaper; amber = higher. Availability meter is trailing 24h. Click a card for full history.</p>
 {% else %}
 <p class="empty">No snapshot data yet. Collectors and rollups are starting up.</p>
 {% endif %}
