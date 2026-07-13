@@ -41,7 +41,7 @@ def _db_size_bytes() -> int | None:
 def main() -> None:
     session = SessionLocal()
     try:
-        print("GPU Index — Status")
+        print("GPU Pulse — Status")
         print("=" * 40)
         print(f"Database: {settings.database_url}")
 

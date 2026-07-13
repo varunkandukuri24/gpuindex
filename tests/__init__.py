@@ -1,1 +1,1 @@
-"""Tests for GPU Index Phase 0."""
+"""Tests for GPU Pulse."""

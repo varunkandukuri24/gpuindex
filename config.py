@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     lambda_api_key: str | None = None
 
     api_rate_limit_per_minute: int = 60
-    site_title: str = "GPU Index"
+    site_title: str = "GPU Pulse"
 
 
 settings = Settings()
