@@ -7,11 +7,13 @@
 <h1>{{ gpu_name }}</h1>
 {% if gpu_type.vram_gb %}<p class="subtitle">{{ gpu_type.vram_gb }} GB · {{ gpu_type.architecture or 'GPU' }}</p>{% endif %}
 {% if snapshot_at %}
-<p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+<p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }} ·
+  <a href="/api/v1/prices.csv?gpu={{ gpu_name }}">Download CSV</a>
+</p>
 {% endif %}
 
 <section>
-  <h2>Price history (min / median / max across providers)</h2>
+  <h2>On-demand price history (median with p10–p90 band)</h2>
   <canvas id="price-chart" height="120"></canvas>
 </section>
 
@@ -26,6 +28,8 @@
           <th>Billing</th>
           <th>$/GPU-hr</th>
           <th>Avail 24h</th>
+          <th>Probe</th>
+          <th>Last probe</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -36,7 +40,7 @@
 <section>
   <h2>Availability heatmap (7 days)</h2>
   <div id="heatmap" class="heatmap"></div>
-  <p class="hint">Darker green = higher availability rate that day. Gray = no data.</p>
+  <p class="hint">Darker green = higher availability rate that day. Gray = no signal that day.</p>
 </section>
 {% endblock %}
 
@@ -51,33 +55,69 @@ async function loadGpuData() {
   ]);
 
   const tbody = document.querySelector('#provider-table tbody');
-  tbody.innerHTML = prices.providers.map(p => `
+  tbody.innerHTML = prices.providers.map(p => {
+    const availLabel = p.availability_indicator === 'unknown' || p.availability_rate_24h == null
+      ? 'no signal'
+      : Math.round(p.availability_rate_24h * 100) + '%';
+    const probed = p.last_probed_at
+      ? p.last_probed_at.slice(0, 16).replace('T', ' ') + ' UTC'
+      : '—';
+    return `
     <tr>
       <td>${p.provider}</td>
       <td>${p.region}</td>
       <td>${p.billing_kind}</td>
       <td>$${p.price_per_gpu_hour_usd.toFixed(2)}</td>
-      <td><span class="indicator ${p.availability_indicator}"></span>
-        ${p.availability_rate_24h != null ? Math.round(p.availability_rate_24h * 100) + '%' : 'unknown'}
-      </td>
-    </tr>
-  `).join('');
+      <td><span class="indicator ${p.availability_indicator || 'unknown'}"></span>${availLabel}</td>
+      <td>${p.probe_method || '—'}</td>
+      <td>${probed}</td>
+    </tr>`;
+  }).join('');
 
   const hist = prices.history || [];
   const labels = hist.map(h => h.hour.slice(0, 16).replace('T', ' '));
+  const p10 = hist.map(h => h.p10 ?? h.min);
+  const p90 = hist.map(h => h.p90 ?? h.max);
+  const median = hist.map(h => h.median);
+
   new Chart(document.getElementById('price-chart'), {
     type: 'line',
     data: {
       labels,
       datasets: [
-        { label: 'Min', data: hist.map(h => h.min), borderColor: '#22c55e', tension: 0.2, pointRadius: 0 },
-        { label: 'Median', data: hist.map(h => h.median), borderColor: '#3b82f6', tension: 0.2, pointRadius: 0 },
-        { label: 'Max', data: hist.map(h => h.max), borderColor: '#ef4444', tension: 0.2, pointRadius: 0 },
+        {
+          label: 'p90',
+          data: p90,
+          borderColor: 'rgba(194,65,12,0.35)',
+          backgroundColor: 'rgba(194,65,12,0.08)',
+          fill: '+1',
+          tension: 0.2,
+          pointRadius: 0,
+          borderWidth: 1,
+        },
+        {
+          label: 'p10',
+          data: p10,
+          borderColor: 'rgba(15,118,110,0.35)',
+          backgroundColor: 'rgba(15,118,110,0.08)',
+          fill: false,
+          tension: 0.2,
+          pointRadius: 0,
+          borderWidth: 1,
+        },
+        {
+          label: 'Median',
+          data: median,
+          borderColor: '#1d4ed8',
+          tension: 0.2,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
       ],
     },
     options: {
       responsive: true,
-      scales: { y: { title: { display: true, text: 'USD per GPU-hour' } } },
+      scales: { y: { title: { display: true, text: 'USD per GPU-hour (on-demand)' } } },
       plugins: { legend: { position: 'bottom' } },
     },
   });

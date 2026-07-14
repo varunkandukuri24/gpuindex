@@ -30,6 +30,7 @@ gpuindex-scheduler = "jobs.scheduler:main"
 gpuindex-status = "jobs.status:main"
 gpuindex-snapshot = "analysis.snapshots:main"
 gpuindex-rollup = "jobs.rollup_job:main"
+gpuindex-audit-normalization = "analysis.audit_normalization:main"
 
 [build-system]
 requires = ["setuptools>=69"]

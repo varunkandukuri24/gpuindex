@@ -6,13 +6,16 @@
       "gpu_ram": 24576,
       "num_gpus": 1,
       "dph_total": 0.45,
+      "dph_base": 0.40,
       "is_bid": false,
       "rentable": true,
       "rented": false,
       "geolocation": "Texas, US",
       "cpu_cores": 16,
       "cpu_ram": 65536,
-      "reliability": 0.99
+      "reliability": 0.99,
+      "reliability2": 0.99,
+      "verified": true
     },
     {
       "id": 1002,
@@ -20,13 +23,32 @@
       "gpu_ram": 81920,
       "num_gpus": 8,
       "dph_total": 24.0,
+      "dph_base": 20.0,
       "is_bid": true,
       "rentable": true,
       "rented": false,
       "geolocation": "Germany, DE",
       "cpu_cores": 128,
       "cpu_ram": 1048576,
-      "reliability": 0.95
+      "reliability": 0.95,
+      "reliability2": 0.95,
+      "verified": true
+    },
+    {
+      "id": 1003,
+      "gpu_name": "RTX 4090",
+      "gpu_ram": 24576,
+      "num_gpus": 2,
+      "dph_total": 0.50,
+      "is_bid": false,
+      "rentable": true,
+      "rented": false,
+      "geolocation": "France, FR",
+      "cpu_cores": 32,
+      "cpu_ram": 131072,
+      "reliability": 0.70,
+      "reliability2": 0.70,
+      "verified": false
     }
   ]
 }

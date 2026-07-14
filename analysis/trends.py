@@ -8,7 +8,11 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from db.models import PriceHistoryPoint
+from analysis.eligibility import (
+    MIN_ELIGIBLE_OFFERS_FOR_TREND,
+    MIN_ELIGIBLE_PROVIDERS_FOR_TREND,
+)
+from db.models import GpuIndexSnapshot, PriceHistoryPoint
 
 SPARKLINE_POINTS = 56
 TREND_DAYS = 7
@@ -21,36 +25,72 @@ def build_index_trends(
     if snapshot_at.tzinfo is None:
         snapshot_at = snapshot_at.replace(tzinfo=UTC)
 
+    snaps = {
+        s.gpu_type_id: s
+        for s in session.query(GpuIndexSnapshot)
+        .filter(GpuIndexSnapshot.snapshot_at == snapshot_at)
+        .all()
+    }
+
     since = snapshot_at - timedelta(days=TREND_DAYS)
     rows = (
         session.query(PriceHistoryPoint)
         .filter(
             PriceHistoryPoint.snapshot_at == snapshot_at,
             PriceHistoryPoint.hour_bucket >= since,
+            PriceHistoryPoint.billing_kind == "on_demand",
         )
         .order_by(PriceHistoryPoint.hour_bucket)
         .all()
     )
 
-    by_gpu: dict[int, list[tuple[datetime, float]]] = defaultdict(list)
+    by_gpu: dict[int, list[tuple[datetime, float, int, int]]] = defaultdict(list)
     for row in rows:
         hour = row.hour_bucket
         if hour.tzinfo is None:
             hour = hour.replace(tzinfo=UTC)
-        by_gpu[row.gpu_type_id].append((hour, row.median_per_gpu_hour_usd))
+        by_gpu[row.gpu_type_id].append(
+            (
+                hour,
+                row.median_per_gpu_hour_usd,
+                row.eligible_offer_count or 0,
+                row.provider_count or 0,
+            )
+        )
 
     result: dict[int, dict[str, Any]] = {}
     for gpu_id, series in by_gpu.items():
-        medians = [price for _, price in series]
+        medians = [price for _, price, _, _ in series]
         current = medians[-1]
-        change_7d = pct_change_vs_lookback(series, current, hours=24 * TREND_DAYS)
+        snap = snaps.get(gpu_id)
+        sample_ok = bool(snap.trend_sample_ok) if snap is not None else _series_sample_ok(series)
+
+        change_24h = (
+            pct_change_vs_lookback(series, current, hours=24) if sample_ok else None
+        )
+        change_7d = (
+            pct_change_vs_lookback(series, current, hours=24 * TREND_DAYS)
+            if sample_ok
+            else None
+        )
         result[gpu_id] = {
             "sparkline": downsample(medians, SPARKLINE_POINTS),
-            "change_24h_pct": pct_change_vs_lookback(series, current, hours=24),
+            "change_24h_pct": change_24h,
             "change_7d_pct": change_7d,
-            "trend_down": change_7d is not None and change_7d < 0,
+            "trend_sample_ok": sample_ok,
+            "insufficient_data": not sample_ok,
         }
     return result
+
+
+def _series_sample_ok(series: list[tuple[datetime, float, int, int]]) -> bool:
+    if not series:
+        return False
+    _, _, offers, providers = series[-1]
+    return (
+        offers >= MIN_ELIGIBLE_OFFERS_FOR_TREND
+        and providers >= MIN_ELIGIBLE_PROVIDERS_FOR_TREND
+    )
 
 
 def downsample(values: list[float], max_points: int) -> list[float]:
@@ -65,12 +105,12 @@ def downsample(values: list[float], max_points: int) -> list[float]:
 
 
 def pct_change_vs_lookback(
-    series: list[tuple[datetime, float]],
+    series: list[tuple],
     current: float,
     *,
     hours: int,
 ) -> float | None:
-    """Percent change from the value nearest to (latest - hours) to current."""
+    """Percent change in median from nearest (latest - hours) to current."""
     if not series or current is None:
         return None
 
@@ -78,16 +118,13 @@ def pct_change_vs_lookback(
     target = latest_hour - timedelta(hours=hours)
 
     past: float | None = None
-    for hour, price in series:
+    for hour, price, *_rest in series:
         if hour <= target:
             past = price
         else:
             break
 
-    # Not enough history yet (series starts after the lookback target)
-    if past is None:
-        return None
-    if past == 0:
+    if past is None or past == 0:
         return None
     return round((current - past) / past * 100.0, 1)
 
@@ -105,7 +142,6 @@ def sparkline_svg(
 
     lo = min(values)
     hi = max(values)
-    # Pad the y-range so flat series still have some visual shape
     span = hi - lo
     if span <= 0:
         pad_y = max(abs(hi) * 0.02, 0.01)
@@ -154,12 +190,13 @@ def sparkline_svg(
 
 
 def availability_level(indicator: str, rate: float | None) -> tuple[str, int]:
-    """Map availability to (label, filled_segments out of 4)."""
-    if indicator == "green" or (rate is not None and rate >= 0.7):
+    """Map availability to (label, filled_segments out of 4). Unknown = no signal."""
+    if indicator == "unknown" or rate is None:
+        return "no signal", 0
+    if indicator == "green" or rate >= 0.7:
         return "High", 4
-    if indicator == "yellow" or (rate is not None and rate >= 0.3):
+    if indicator == "yellow" or rate >= 0.3:
         return "Med", 2
-    if indicator == "red" or (rate is not None and rate >= 0):
+    if indicator == "red":
         return "Low", 1
-    return "—", 0
-
+    return "no signal", 0

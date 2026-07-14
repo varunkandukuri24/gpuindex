@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Status</h1>
+<p class="subtitle">Collector health and dataset size.</p>
+
+<section class="prose">
+  <p><strong>Database:</strong> <code>{{ status.database_url }}</code></p>
+  {% if status.db_size_bytes is not none %}
+  <p><strong>DB size:</strong> {{ '{:,}'.format(status.db_size_bytes) }} bytes</p>
+  {% endif %}
+  <p><strong>Last scheduler heartbeat:</strong> {{ status.last_heartbeat_fmt }}</p>
+  <p><strong>Price observations:</strong> {{ '{:,}'.format(status.price_observations) }}</p>
+  <p><strong>Availability observations:</strong> {{ '{:,}'.format(status.availability_observations) }}</p>
+</section>
+
+<section>
+  <h2>Collectors</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Collector</th>
+          <th>Status</th>
+          <th>Last run</th>
+          <th>Prices</th>
+          <th>Avail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in status.collectors %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>{{ row.status }}</td>
+          <td>{{ row.started_at_fmt }}</td>
+          <td>{{ row.price_rows_written }}</td>
+          <td>{{ row.availability_rows_written }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">No collector runs recorded yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

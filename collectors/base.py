@@ -15,6 +15,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from collectors.gpu_normalize import NormalizedGpu, normalize_gpu
+from collectors.parser_version import CURRENT_PARSER_VERSION
 from collectors.providers import PROVIDER_REGISTRY
 from config import settings
 from db.models import (
@@ -47,6 +48,8 @@ class PriceObservationData:
     vcpus: int | None = None
     ram_gb: float | None = None
     observed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    attrs: dict[str, Any] = field(default_factory=dict)
+    parser_version: int = CURRENT_PARSER_VERSION
 
     @property
     def price_per_gpu_hour_usd(self) -> float:
@@ -190,6 +193,8 @@ class BaseCollector(ABC):
                     billing_kind=obs.billing_kind,
                     observed_at=obs.observed_at,
                     source=obs.source,
+                    parser_version=obs.parser_version,
+                    attrs_json=json.dumps(obs.attrs) if obs.attrs else None,
                 )
             )
             price_count += 1

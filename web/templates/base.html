@@ -4,10 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ title }}{% endblock %}</title>
+  <meta name="description" content="{{ og_description | default('Open-source GPU cloud price and availability index.') }}">
+  <meta property="og:title" content="{{ title }}">
+  <meta property="og:description" content="{{ og_description | default('Open-source GPU cloud price and availability index.') }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GPU Pulse">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=20260713-cards">
+  <link rel="stylesheet" href="/static/style.css?v=20260713-credibility">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -17,6 +22,7 @@
       <nav>
         <a href="/">Index</a>
         <a href="/methodology">Methodology</a>
+        <a href="/status">Status</a>
         <a href="/api/v1/index">JSON API</a>
       </nav>
     </div>
@@ -26,7 +32,7 @@
   </main>
   <footer class="site-footer">
     <div class="container">
-      <p>Append-only hourly observations. No accounts, no tracking.</p>
+      <p>Append-only hourly observations. No accounts, no tracking. Data licensed <a href="/methodology">CC BY 4.0</a>.</p>
     </div>
   </footer>
   {% block scripts %}{% endblock %}

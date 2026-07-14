@@ -47,12 +47,28 @@ def test_vast_collector_prices_and_availability():
 
     result = VastCollector().fetch()
 
-    assert len(result.price_observations) == 2
-    assert len(result.availability_observations) == 2
+    # Deduped across on_demand + bid fetches
+    assert len(result.price_observations) == 3
+    assert len(result.availability_observations) == 3
     assert all(obs.status == "available" for obs in result.availability_observations)
-    gpu_names = {obs.gpu_type_name for obs in result.price_observations}
-    assert "RTX-4090" in gpu_names
-    assert "H100-SXM-80GB" in gpu_names
+
+    by_sku = {obs.instance_sku: obs for obs in result.price_observations}
+    h100 = by_sku["vast-1002"]
+    assert h100.gpu_type_name == "H100-SXM-80GB"
+    assert h100.gpu_count == 8
+    assert h100.price_hourly_usd == 24.0
+    assert h100.price_per_gpu_hour_usd == 3.0
+    assert h100.billing_kind == "spot"
+    assert h100.attrs["verified"] is True
+
+    rtx = by_sku["vast-1001"]
+    assert rtx.billing_kind == "on_demand"
+    assert rtx.price_per_gpu_hour_usd == 0.45
+
+    cheap = by_sku["vast-1003"]
+    assert cheap.gpu_count == 2
+    assert cheap.price_per_gpu_hour_usd == 0.25
+    assert cheap.attrs["verified"] is False
 
 
 @respx.mock

@@ -48,4 +48,4 @@ def test_availability_level():
     assert availability_level("green", 0.9) == ("High", 4)
     assert availability_level("yellow", 0.4) == ("Med", 2)
     assert availability_level("red", 0.1) == ("Low", 1)
-    assert availability_level("unknown", None) == ("—", 0)
+    assert availability_level("unknown", None) == ("no signal", 0)

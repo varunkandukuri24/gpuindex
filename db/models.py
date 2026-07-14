@@ -4,6 +4,7 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -126,6 +127,8 @@ class PriceObservation(Base):
         DateTime(timezone=True), nullable=False
     )
     source: Mapped[str] = mapped_column(String(32), nullable=False)
+    parser_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    attrs_json: Mapped[str | None] = mapped_column(Text)
 
     provider: Mapped["Provider"] = relationship(back_populates="price_observations")
     gpu_type: Mapped["GpuType"] = relationship(back_populates="price_observations")
@@ -262,6 +265,12 @@ class GpuIndexSnapshot(Base):
     gpu_type_id: Mapped[int] = mapped_column(ForeignKey("gpu_types.id"), nullable=False)
     cheapest_listed_per_gpu_hour_usd: Mapped[float | None] = mapped_column(Float)
     cheapest_available_per_gpu_hour_usd: Mapped[float | None] = mapped_column(Float)
+    median_on_demand_per_gpu_hour_usd: Mapped[float | None] = mapped_column(Float)
+    floor_on_demand_per_gpu_hour_usd: Mapped[float | None] = mapped_column(Float)
+    spot_floor_per_gpu_hour_usd: Mapped[float | None] = mapped_column(Float)
+    eligible_offer_count: Mapped[int] = mapped_column(Integer, default=0)
+    eligible_provider_count: Mapped[int] = mapped_column(Integer, default=0)
+    trend_sample_ok: Mapped[bool] = mapped_column(Boolean, default=False)
     provider_count: Mapped[int] = mapped_column(Integer, default=0)
     availability_rate_24h: Mapped[float | None] = mapped_column(Float)
     availability_indicator: Mapped[str] = mapped_column(String(16), default="unknown")
@@ -287,10 +296,16 @@ class PriceHistoryPoint(Base):
     hour_bucket: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+    billing_kind: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="on_demand"
+    )
     min_per_gpu_hour_usd: Mapped[float] = mapped_column(Float, nullable=False)
     median_per_gpu_hour_usd: Mapped[float] = mapped_column(Float, nullable=False)
     max_per_gpu_hour_usd: Mapped[float] = mapped_column(Float, nullable=False)
+    p10_per_gpu_hour_usd: Mapped[float | None] = mapped_column(Float)
+    p90_per_gpu_hour_usd: Mapped[float | None] = mapped_column(Float)
     provider_count: Mapped[int] = mapped_column(Integer, default=0)
+    eligible_offer_count: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class ProviderGpuSnapshot(Base):
@@ -316,6 +331,9 @@ class ProviderGpuSnapshot(Base):
     price_per_gpu_hour_usd: Mapped[float] = mapped_column(Float, nullable=False)
     availability_rate_24h: Mapped[float | None] = mapped_column(Float)
     availability_indicator: Mapped[str] = mapped_column(String(16), default="unknown")
+    probe_method: Mapped[str | None] = mapped_column(String(32))
+    last_probed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attrs_json: Mapped[str | None] = mapped_column(Text)
 
 
 class AvailabilityDailyRollup(Base):
