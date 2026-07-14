@@ -93,6 +93,9 @@ def run_all_collectors() -> None:
     for collector in COLLECTORS:
         run_collector(collector)
     log_extra(logger, logging.INFO, "collector_cycle_finished")
+    # Roll up in-process after collectors so we don't race SQLite writers
+    # (parallel collector + rollup jobs caused "database is locked" on SkyPilot).
+    run_rollups()
 
 
 def record_heartbeat() -> None:
@@ -140,16 +143,6 @@ def main() -> None:
         trigger=IntervalTrigger(minutes=5),
         id="heartbeat",
         name="Scheduler heartbeat",
-        max_instances=1,
-        coalesce=True,
-        next_run_time=datetime.now(UTC),
-    )
-
-    scheduler.add_job(
-        run_rollups,
-        trigger=IntervalTrigger(minutes=settings.collector_interval_minutes),
-        id="rollups",
-        name="Compute snapshot rollups",
         max_instances=1,
         coalesce=True,
         next_run_time=datetime.now(UTC),
