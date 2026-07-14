@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from analysis.rollups import latest_snapshot_at
 from analysis.trends import build_index_trends
 from api.deps import get_db
+from build_info import GIT_SHA
 from config import settings
 from db.models import (
     AvailabilityDailyRollup,
@@ -19,9 +21,11 @@ from db.models import (
     PriceHistoryPoint,
     Provider,
     ProviderGpuSnapshot,
+    RollupRun,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["v1"])
+logger = logging.getLogger(__name__)
 
 DATA_LICENSE = "CC BY 4.0"
 METHODOLOGY_PATH = "/methodology"
@@ -34,6 +38,25 @@ def _require_snapshot(session: Session) -> datetime:
     return snapshot_at
 
 
+def _warn_stale_rollup_shape(rows: list) -> bool:
+    """Detect old rollup output served by new API (split-brain deploy fingerprint)."""
+    stale = False
+    for snap, gpu in rows:
+        if (
+            snap.cheapest_listed_per_gpu_hour_usd is not None
+            and snap.floor_on_demand_per_gpu_hour_usd is None
+        ):
+            stale = True
+            logger.warning(
+                "snapshot written by stale rollup code: gpu=%s "
+                "cheapest_listed=%s floor_on_demand=null — rebuild scheduler + api "
+                "with `docker compose up -d --build`",
+                gpu.name,
+                snap.cheapest_listed_per_gpu_hour_usd,
+            )
+    return stale
+
+
 @router.get("/meta")
 def meta(session: Session = Depends(get_db)) -> dict:
     snapshot_at = latest_snapshot_at(session)
@@ -44,6 +67,7 @@ def meta(session: Session = Depends(get_db)) -> dict:
         "methodology_url": METHODOLOGY_PATH,
         "data_license": DATA_LICENSE,
         "site_title": settings.site_title,
+        "code_version": GIT_SHA,
     }
 
 
@@ -62,7 +86,14 @@ def index(
         .order_by(GpuType.name)
         .all()
     )
+    stale_rollup = _warn_stale_rollup_shape(rows)
     trends = build_index_trends(session, snapshot_at)
+
+    rollup = (
+        session.query(RollupRun)
+        .filter_by(snapshot_at=snapshot_at, status="success")
+        .one_or_none()
+    )
 
     items = []
     for snap, gpu in rows:
@@ -98,6 +129,9 @@ def index(
         "generated_at": datetime.now(UTC).isoformat(),
         "methodology_url": METHODOLOGY_PATH,
         "data_license": DATA_LICENSE,
+        "code_version": GIT_SHA,
+        "rollup_code_version": rollup.code_version if rollup else None,
+        "stale_rollup_suspected": stale_rollup,
         "gpus": items,
     }
 

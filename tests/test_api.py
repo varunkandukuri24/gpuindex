@@ -83,7 +83,9 @@ def client():
 
 
 def test_health(client):
-    assert client.get("/health").json() == {"status": "ok"}
+    data = client.get("/health").json()
+    assert data["status"] == "ok"
+    assert "code_version" in data
 
 
 def test_api_index(client):
@@ -93,6 +95,8 @@ def test_api_index(client):
     assert data["data_license"] == "CC BY 4.0"
     assert "generated_at" in data
     assert data["methodology_url"] == "/methodology"
+    assert "code_version" in data
+    assert data["stale_rollup_suspected"] is False
     assert len(data["gpus"]) == 1
     gpu = data["gpus"][0]
     assert gpu["gpu"] == "H100-SXM-80GB"
@@ -100,6 +104,7 @@ def test_api_index(client):
     assert gpu["median_on_demand_per_gpu_hour_usd"] == 3.0
     assert "sparkline" in gpu
     assert "insufficient_data" in gpu
+    assert "Cache-Control" in resp.headers
 
 
 def test_api_prices(client):

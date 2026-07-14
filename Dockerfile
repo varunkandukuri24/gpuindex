@@ -2,9 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+ARG GIT_SHA=dev
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    GIT_SHA=${GIT_SHA}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
@@ -12,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml README.md ./
 COPY alembic.ini ./
 COPY alembic ./alembic
-COPY config.py logging_utils.py ./
+COPY config.py logging_utils.py build_info.py ./
 COPY collectors ./collectors
 COPY db ./db
 COPY jobs ./jobs
