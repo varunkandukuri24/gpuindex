@@ -248,6 +248,7 @@ class RollupRun(Base):
     provider_snapshot_rows: Mapped[int] = mapped_column(Integer, default=0)
     availability_daily_rows: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[str | None] = mapped_column(Text)
+    code_version: Mapped[str | None] = mapped_column(String(64))
 
 
 class GpuIndexSnapshot(Base):

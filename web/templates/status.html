@@ -4,6 +4,11 @@
 <p class="subtitle">Collector health and dataset size.</p>
 
 <section class="prose">
+  <p><strong>Code version (this process):</strong> <code>{{ status.code_version }}</code></p>
+  <p><strong>Latest rollup code version:</strong> <code>{{ status.latest_rollup_code_version or '—' }}</code>
+    {% if status.code_mismatch %}<span class="delta up"> mismatch — rebuild both containers</span>{% endif %}
+  </p>
+  <p><strong>Latest rollup:</strong> {{ status.latest_rollup_at_fmt }}</p>
   <p><strong>Database:</strong> <code>{{ status.database_url }}</code></p>
   {% if status.db_size_bytes is not none %}
   <p><strong>DB size:</strong> {{ '{:,}'.format(status.db_size_bytes) }} bytes</p>

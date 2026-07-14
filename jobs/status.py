@@ -18,6 +18,10 @@ def main() -> None:
         data = collect_status(session)
         print("GPU Pulse — Status")
         print("=" * 40)
+        print(f"Code version: {data['code_version']}")
+        print(f"Latest rollup code: {data['latest_rollup_code_version'] or '—'}")
+        if data.get("code_mismatch"):
+            print("WARNING: API/status process SHA != last rollup SHA — rebuild both containers")
         print(f"Database: {data['database_url']}")
         if data["db_size_bytes"] is not None:
             print(f"DB size: {data['db_size_bytes']:,} bytes")

@@ -18,13 +18,14 @@
           <span class="tag">on-demand</span>
         </div>
       </div>
-      <div class="avail-meter" title="Availability (24h)">
+      <div class="avail-meter" title="Availability among probed providers (24h)">
         <div class="avail-bars" aria-hidden="true">
           {% for i in range(4) %}
           <span class="avail-bar {% if i < row.avail_segments %}on {{ row.snap.availability_indicator }}{% endif %}"></span>
           {% endfor %}
         </div>
         <span class="avail-label">{{ row.avail_label }}</span>
+        <span class="avail-scope">of probed</span>
       </div>
     </div>
 
@@ -78,7 +79,7 @@
   {% endfor %}
 </div>
 
-<p class="hint">Primary price is the <strong>median eligible on-demand</strong> $/GPU-hr. “From” is the eligible floor. Spot never sets the headline. Green chart = cheaper over 7d. Trends require enough eligible offers/providers.</p>
+<p class="hint">Primary price is the <strong>median eligible on-demand</strong> $/GPU-hr. “From” is the eligible floor. Spot never sets the headline. Availability is among <strong>probed providers only</strong> (not market-wide). Green chart = cheaper over 7d.</p>
 {% else %}
 <p class="empty">No snapshot data yet. Collectors and rollups are starting up.</p>
 {% endif %}

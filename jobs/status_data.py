@@ -10,10 +10,12 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from config import settings
+from build_info import GIT_SHA
 from db.models import (
     AvailabilityObservation,
     CollectorRun,
     PriceObservation,
+    RollupRun,
     SchedulerHeartbeat,
 )
 
@@ -47,6 +49,12 @@ def collect_status(session: Session) -> dict[str, Any]:
     )
     price_count = session.query(func.count(PriceObservation.id)).scalar() or 0
     avail_count = session.query(func.count(AvailabilityObservation.id)).scalar() or 0
+    latest_rollup = (
+        session.query(RollupRun)
+        .filter(RollupRun.status == "success")
+        .order_by(RollupRun.snapshot_at.desc())
+        .first()
+    )
 
     collectors = (
         session.query(CollectorRun.collector_name)
@@ -78,6 +86,7 @@ def collect_status(session: Session) -> dict[str, Any]:
     return {
         "database_url": settings.database_url,
         "db_size_bytes": db_size_bytes(),
+        "code_version": GIT_SHA,
         "last_heartbeat": last_heartbeat.observed_at if last_heartbeat else None,
         "last_heartbeat_fmt": format_time(
             last_heartbeat.observed_at if last_heartbeat else None
@@ -85,4 +94,15 @@ def collect_status(session: Session) -> dict[str, Any]:
         "price_observations": price_count,
         "availability_observations": avail_count,
         "collectors": collector_rows,
+        "latest_rollup_code_version": (
+            latest_rollup.code_version if latest_rollup else None
+        ),
+        "latest_rollup_at_fmt": format_time(
+            latest_rollup.snapshot_at if latest_rollup else None
+        ),
+        "code_mismatch": bool(
+            latest_rollup
+            and latest_rollup.code_version
+            and latest_rollup.code_version != GIT_SHA
+        ),
     }

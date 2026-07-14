@@ -17,6 +17,7 @@ from analysis.eligibility import (
     MIN_ELIGIBLE_PROVIDERS_FOR_TREND,
     is_index_eligible,
 )
+from build_info import GIT_SHA
 from collectors.parser_version import CURRENT_PARSER_VERSION
 from db.models import (
     AvailabilityDailyRollup,
@@ -94,7 +95,8 @@ def compute_rollups(session: Session) -> RollupRun:
         .filter_by(snapshot_at=snapshot_at, status="success")
         .one_or_none()
     )
-    if existing:
+    # Recompute if this hour was rolled by a different (stale) image.
+    if existing and existing.code_version == GIT_SHA:
         return existing
 
     session.query(RollupRun).filter_by(snapshot_at=snapshot_at).delete()
@@ -107,6 +109,7 @@ def compute_rollups(session: Session) -> RollupRun:
         snapshot_at=snapshot_at,
         started_at=started_at,
         status="running",
+        code_version=GIT_SHA,
     )
     session.add(run)
     session.flush()
@@ -114,22 +117,11 @@ def compute_rollups(session: Session) -> RollupRun:
     try:
         gpu_types = session.query(GpuType).order_by(GpuType.name).all()
         providers_by_id = {p.id: p for p in session.query(Provider).all()}
-        gpu_ids_with_prices = {
-            row[0]
-            for row in session.query(PriceObservation.gpu_type_id)
-            .filter(PriceObservation.parser_version == CURRENT_PARSER_VERSION)
-            .distinct()
-            .all()
-        }
-        # Fall back to any prices if no current-parser rows yet (fresh deploy).
-        if not gpu_ids_with_prices:
-            gpu_ids_with_prices = {
-                row[0]
-                for row in session.query(PriceObservation.gpu_type_id).distinct().all()
-            }
-            parser_filter = None
-        else:
-            parser_filter = CURRENT_PARSER_VERSION
+        parser_filter = _resolve_parser_filter(session)
+        gpu_ids_q = session.query(PriceObservation.gpu_type_id).distinct()
+        if parser_filter is not None:
+            gpu_ids_q = gpu_ids_q.filter(PriceObservation.parser_version == parser_filter)
+        gpu_ids_with_prices = {row[0] for row in gpu_ids_q.all()}
 
         active_gpus = [g for g in gpu_types if g.id in gpu_ids_with_prices]
 
@@ -274,6 +266,21 @@ def compute_rollups(session: Session) -> RollupRun:
         run.finished_at = datetime.now(UTC)
         session.flush()
         raise
+
+
+def _resolve_parser_filter(session: Session) -> int | None:
+    """Prefer current parser version; else the max version present (never mix all)."""
+    has_current = (
+        session.query(PriceObservation.id)
+        .filter(PriceObservation.parser_version == CURRENT_PARSER_VERSION)
+        .limit(1)
+        .first()
+    )
+    if has_current:
+        return CURRENT_PARSER_VERSION
+
+    max_version = session.query(func.max(PriceObservation.parser_version)).scalar()
+    return int(max_version) if max_version is not None else None
 
 
 def _latest_prices(

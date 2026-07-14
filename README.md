@@ -74,6 +74,22 @@ tests/          Unit tests with mocked HTTP fixtures
 
 ---
 
+## Deploy / rebuild
+
+Always rebuild **both** app services together so the API and scheduler never drift:
+
+```bash
+cd /path/to/gpuindex
+export GIT_SHA=$(git rev-parse HEAD)
+docker compose up -d --build
+docker compose ps
+docker compose exec scheduler gpuindex-rollup
+```
+
+Do **not** rebuild a single service (`docker compose build api` alone). After deploy, `/status` should show matching `code_version` and `latest rollup code version`, and `/api/v1/index` should have `stale_rollup_suspected: false`.
+
+---
+
 ## Data model
 
 Observations are **append-only** — nothing is overwritten. Two core tables:
@@ -87,4 +103,4 @@ Hourly rollup tables power the website. Raw observations are retained for reproc
 
 ## License
 
-TBD
+Published rollups: **CC BY 4.0** (see Methodology).
