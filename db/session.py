@@ -20,21 +20,22 @@ def _ensure_sqlite_dir(database_url: str) -> None:
 
 _ensure_sqlite_dir(settings.database_url)
 
+_sqlite = settings.database_url.startswith("sqlite")
 engine = create_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False}
-    if settings.database_url.startswith("sqlite")
-    else {},
+    # timeout: wait on locks instead of failing immediately (SkyPilot bulk inserts).
+    connect_args={"check_same_thread": False, "timeout": 60.0} if _sqlite else {},
     pool_pre_ping=True,
 )
 
-if settings.database_url.startswith("sqlite"):
+if _sqlite:
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_connection, connection_record) -> None:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=60000")
         cursor.close()
 
 

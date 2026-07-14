@@ -7,9 +7,7 @@
 <h1>{{ gpu_name }}</h1>
 {% if gpu_type.vram_gb %}<p class="subtitle">{{ gpu_type.vram_gb }} GB · {{ gpu_type.architecture or 'GPU' }}</p>{% endif %}
 {% if snapshot_at %}
-<p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }} ·
-  <a href="/api/v1/prices.csv?gpu={{ gpu_name }}">Download CSV</a>
-</p>
+<p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
 {% endif %}
 
 <section>

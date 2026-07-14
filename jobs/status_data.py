@@ -64,6 +64,8 @@ def collect_status(session: Session) -> dict[str, Any]:
     )
     collector_rows = []
     for (name,) in collectors:
+        if name == "dummy":
+            continue
         run = (
             session.query(CollectorRun)
             .filter_by(collector_name=name)
