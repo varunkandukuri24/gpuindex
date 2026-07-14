@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>GPU Cloud Price Index</h1>
-<p class="subtitle">Cheapest listed and available per-GPU-hour prices, with 7-day trends.</p>
+<p class="subtitle">Median on-demand $/GPU-hr across eligible providers, with 7-day trends. Spot floors shown separately.</p>
 
 {% if snapshot_at %}
 <p class="meta">Data as of {{ snapshot_at.strftime('%Y-%m-%d %H:%M UTC') }} · refreshes hourly</p>
@@ -15,6 +15,7 @@
         <div class="gpu-tags">
           {% if row.gpu.architecture %}<span class="tag">{{ row.gpu.architecture }}</span>{% endif %}
           {% if row.gpu.vram_gb %}<span class="tag">{{ row.gpu.vram_gb }}GB VRAM</span>{% endif %}
+          <span class="tag">on-demand</span>
         </div>
       </div>
       <div class="avail-meter" title="Availability (24h)">
@@ -38,29 +39,38 @@
     <div class="gpu-card-bottom">
       <div class="price-block">
         <div class="price-main">
-          {% if row.snap.cheapest_listed_per_gpu_hour_usd %}${{ '%.2f'|format(row.snap.cheapest_listed_per_gpu_hour_usd) }}<span class="per">/hr</span>{% else %}—{% endif %}
+          {% if row.snap.median_on_demand_per_gpu_hour_usd is not none %}
+            ${{ '%.2f'|format(row.snap.median_on_demand_per_gpu_hour_usd) }}<span class="per">/hr</span>
+          {% elif row.snap.floor_on_demand_per_gpu_hour_usd is not none %}
+            ${{ '%.2f'|format(row.snap.floor_on_demand_per_gpu_hour_usd) }}<span class="per">/hr</span>
+          {% else %}
+            —
+          {% endif %}
         </div>
         <div class="price-sub">
-          {% if row.snap.cheapest_available_per_gpu_hour_usd %}
-            available from ${{ '%.2f'|format(row.snap.cheapest_available_per_gpu_hour_usd) }}/hr
-          {% else %}
-            available price unknown
+          {% if row.snap.floor_on_demand_per_gpu_hour_usd is not none %}
+            from ${{ '%.2f'|format(row.snap.floor_on_demand_per_gpu_hour_usd) }}/hr eligible
           {% endif %}
-          · {{ row.snap.provider_count }} providers
+          {% if row.snap.spot_floor_per_gpu_hour_usd is not none %}
+            <span class="spot-floor"> · spot from ${{ '%.2f'|format(row.snap.spot_floor_per_gpu_hour_usd) }}</span>
+          {% endif %}
+          · {{ row.snap.eligible_provider_count or row.snap.provider_count }} providers
         </div>
       </div>
       <div class="delta-stack">
-        {% if row.change_24h_pct is not none %}
-        <span class="delta {% if row.change_24h_pct < 0 %}down{% elif row.change_24h_pct > 0 %}up{% endif %}">
-          {% if row.change_24h_pct > 0 %}+{% endif %}{{ '%.1f'|format(row.change_24h_pct) }}% <span class="delta-period">24h</span>
-        </span>
-        {% endif %}
-        {% if row.change_7d_pct is not none %}
-        <span class="delta {% if row.change_7d_pct < 0 %}down{% elif row.change_7d_pct > 0 %}up{% endif %}">
-          {% if row.change_7d_pct > 0 %}+{% endif %}{{ '%.1f'|format(row.change_7d_pct) }}% <span class="delta-period">7d</span>
-        </span>
+        {% if row.insufficient_data %}
+        <span class="muted">insufficient data</span>
         {% else %}
-        <span class="muted">7d —</span>
+          {% if row.change_24h_pct is not none %}
+          <span class="delta {% if row.change_24h_pct < 0 %}down{% elif row.change_24h_pct > 0 %}up{% endif %}">
+            {% if row.change_24h_pct > 0 %}+{% endif %}{{ '%.1f'|format(row.change_24h_pct) }}% <span class="delta-period">24h</span>
+          </span>
+          {% endif %}
+          {% if row.change_7d_pct is not none %}
+          <span class="delta {% if row.change_7d_pct < 0 %}down{% elif row.change_7d_pct > 0 %}up{% endif %}">
+            {% if row.change_7d_pct > 0 %}+{% endif %}{{ '%.1f'|format(row.change_7d_pct) }}% <span class="delta-period">7d</span>
+          </span>
+          {% endif %}
         {% endif %}
       </div>
     </div>
@@ -68,7 +78,7 @@
   {% endfor %}
 </div>
 
-<p class="hint">Charts show 7-day median list price. Green = cheaper; amber = higher. Availability meter is trailing 24h. Click a card for full history.</p>
+<p class="hint">Primary price is the <strong>median eligible on-demand</strong> $/GPU-hr. “From” is the eligible floor. Spot never sets the headline. Green chart = cheaper over 7d. Trends require enough eligible offers/providers.</p>
 {% else %}
 <p class="empty">No snapshot data yet. Collectors and rollups are starting up.</p>
 {% endif %}

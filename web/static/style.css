@@ -253,6 +253,11 @@ a { color: var(--link); }
 .delta.down { color: var(--green); }
 .delta.up { color: var(--red); }
 
+.spot-floor {
+  color: #9a3412;
+  font-weight: 600;
+}
+
 .muted { color: var(--muted); }
 
 .site-footer {

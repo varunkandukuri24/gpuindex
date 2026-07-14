@@ -11,25 +11,56 @@
   <p>Numbers on this site refresh about <strong>once per hour</strong> (UTC). The timestamp at the top of each page shows when the latest snapshot was computed. Expect up to one hour of lag.</p>
 
   <h2>Prices</h2>
-  <p>All prices are shown as <strong>USD per GPU-hour</strong> so you can compare across providers. We normalize GPU names (e.g. H100-SXM-80GB) because each provider labels hardware differently.</p>
-  <p>Prices come from a mix of public provider catalogs, marketplace listings, and published rate cards. A low listed price does not guarantee you can rent at that rate right now.</p>
+  <p>All prices are shown as <strong>USD per GPU-hour</strong> so you can compare across providers. We normalize GPU names (e.g. H100-SXM-80GB) because each provider labels hardware differently. Multi-GPU offers store machine $/hr and divide by GPU count.</p>
+  <p>The index <strong>headline is the median eligible on-demand</strong> price. “From $X” is the eligible on-demand floor. <strong>Spot / interruptible prices never set the headline</strong>; when present they appear as a separate “spot from” line.</p>
+
+  <h2>Marketplace eligibility</h2>
+  <p>Raw marketplace listings are noisy. Every Vast offer is still stored, but only <strong>index-eligible</strong> offers can set floors and medians:</p>
+  <ul>
+    <li>Reported host reliability ≥ <strong>0.95</strong></li>
+    <li>Host marked <strong>verified</strong></li>
+  </ul>
+  <p>Ineligible listings still count toward volume stats; they just cannot move the published floor. Catalog and capacity-API providers (SkyPilot, Lambda, RunPod) are treated as eligible for their published rate cards.</p>
+
+  <h2>Trends</h2>
+  <p>7-day and 24-hour percentage changes track the <strong>rolling median</strong> of eligible on-demand prices — not the raw minimum. If there are fewer than 5 eligible offers or fewer than 3 providers in the latest sample, we show <strong>insufficient data</strong> instead of a percentage.</p>
 
   <h2>Availability</h2>
-  <p>Not every provider publishes capacity information. Where we have a signal, we show it; where we don't, we label it <strong>unknown</strong> rather than guessing.</p>
+  <p>Not every provider publishes capacity information. Where we have a signal, we show it; where we don't, we label it <strong>no signal</strong> rather than 0%. Zero would be a claim; unknown is not.</p>
   <ul>
-    <li><span class="indicator green"></span> <strong>Green</strong> — capacity looked available in most checks over the past 24 hours</li>
-    <li><span class="indicator yellow"></span> <strong>Yellow</strong> — mixed signals</li>
-    <li><span class="indicator red"></span> <strong>Red</strong> — rarely looked available recently</li>
-    <li><span class="indicator unknown"></span> <strong>Unknown</strong> — we track list prices but have no availability signal for this GPU</li>
+    <li><span class="indicator green"></span> <strong>High</strong> — capacity looked available in most checks over the past 24 hours</li>
+    <li><span class="indicator yellow"></span> <strong>Med</strong> — mixed signals</li>
+    <li><span class="indicator red"></span> <strong>Low</strong> — rarely looked available recently</li>
+    <li><span class="indicator unknown"></span> <strong>No signal</strong> — we track list prices but have no availability probe for this GPU</li>
   </ul>
-  <p><strong>Cheapest available</strong> only includes offers where we saw a recent availability signal. <strong>Cheapest listed</strong> includes all published prices, including catalog entries that may not be rentable on demand.</p>
+
+  <h2>How we probe availability</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Provider</th><th>Probe method</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        {% for row in probe_methods %}
+        <tr>
+          <td>{{ row.provider }}</td>
+          <td><code>{{ row.method }}</code></td>
+          <td>{{ row.notes }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Data license</h2>
+  <p>Published rollups and API responses are licensed under <strong>{{ data_license }}</strong>. Attribution: “GPU Pulse (gpupulse.xyz)”. Raw provider payloads remain subject to each provider’s terms.</p>
 
   <h2>Limitations</h2>
   <ul>
-    <li>List prices may exclude spot discounts, reserved pricing, credits, or enterprise agreements.</li>
+    <li>List prices may exclude reserved discounts, credits, or enterprise agreements.</li>
     <li>Marketplace and catalog data can lag reality by minutes to hours.</li>
     <li>Availability indicators are observational, not a guarantee of successful provisioning.</li>
-    <li>Coverage and accuracy improve over time as we add providers and history accumulates.</li>
+    <li>Parser upgrades use a version stamp — we don't rewrite past rows; new rollups prefer current parser data.</li>
   </ul>
 
   <h2>API</h2>
